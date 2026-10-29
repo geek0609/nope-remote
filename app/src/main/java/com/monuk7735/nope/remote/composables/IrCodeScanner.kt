@@ -12,6 +12,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -19,11 +20,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.monuk7735.nope.remote.infrared.IRController
-import kotlinx.coroutines.Dispatchers
+import com.monuk7735.nope.remote.infrared.IrCommandSearch
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 /** Search addresses and commands for a chosen protocol; this does not receive IR signals. */
 @Composable
@@ -45,9 +45,11 @@ fun IrCodeScanner(
     var scanJob by remember { mutableStateOf<Job?>(null) }
     var running by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf<String?>(null) }
+    var generation by remember { mutableIntStateOf(0) }
 
     LaunchedEffect(protocol, device, subdevice) {
-        scanJob?.cancel()
+        generation++
+        scanJob?.cancelAndJoin()
         current = null
         currentAddress = null
         addressStart = device?.toString() ?: "0"
@@ -58,20 +60,34 @@ fun IrCodeScanner(
     fun transmit(command: Int) {
         val address = currentAddress ?: return
         if (running || controller == null || subdevice == null) return
+        val runGeneration = generation
         scanJob = scope.launch {
             running = true
             try {
-                val pattern = generateProtocolPattern(protocol, address, subdevice, command)
-                current = command
-                withContext(Dispatchers.IO) { controller.transmit(pattern) }
-                message =
-                    "Sent address $address, command $command. Select it if the device responded."
+                IrCommandSearch.send(
+                    address,
+                    command,
+                    transmit = { a, c ->
+                        controller.transmit(generateProtocolPattern(protocol, a, subdevice, c))
+                    },
+                    onSent = { a, c ->
+                        if (generation == runGeneration) {
+                            currentAddress = a
+                            current = c
+                            message =
+                                "Sent address $a, command $c. Select it if the device responded."
+                        }
+                    },
+                )
             } catch (error: kotlinx.coroutines.CancellationException) {
+                if (generation == runGeneration) message = "Stopped. Select the last signal below."
                 throw error
             } catch (error: Exception) {
-                message = error.message ?: "Could not transmit the signal"
+                if (generation == runGeneration) {
+                    message = error.message ?: "Could not transmit the signal"
+                }
             } finally {
-                running = false
+                if (generation == runGeneration) running = false
             }
         }
     }
@@ -131,7 +147,7 @@ fun IrCodeScanner(
                 onClick = {
                     if (running) {
                         scanJob?.cancel()
-                        message = "Stopped. Select the last signal below."
+                        message = "Stopping after the current signal..."
                     } else {
                         val first = start.toIntOrNull()
                         val last = end.toIntOrNull()
@@ -155,39 +171,50 @@ fun IrCodeScanner(
                             message =
                                 "Use addresses 0–65535, commands 0–255, at most 65536 signals and a delay of 300–30000 ms."
                         } else {
+                            val runGeneration = generation
                             scanJob = scope.launch {
                                 running = true
                                 try {
-                                    for (address in firstAddress..lastAddress) {
-                                        for (command in first..last) {
-                                            val pattern =
+                                    IrCommandSearch.scan(
+                                        addresses = firstAddress..lastAddress,
+                                        commands = first..last,
+                                        pauseMillis = pause,
+                                        transmit = { address, command ->
+                                            controller.transmit(
                                                 generateProtocolPattern(
                                                     protocol,
                                                     address,
                                                     subdevice,
                                                     command,
-                                                )
-                                            currentAddress = address
-                                            current = command
-                                            message =
-                                                "Sending address $address, command $command. Stop when the device responds."
-                                            withContext(Dispatchers.IO) {
-                                                controller.transmit(pattern)
+                                                ),
+                                            )
+                                        },
+                                        onSending = { address, command ->
+                                            if (generation == runGeneration) {
+                                                message =
+                                                    "Sending address $address, command $command. " +
+                                                    "Stop when the device responds."
                                             }
-                                            if (address < lastAddress ||
-                                                command < last
-                                            ) {
-                                                delay(pause)
+                                        },
+                                        onSent = { address, command ->
+                                            if (generation == runGeneration) {
+                                                currentAddress = address
+                                                current = command
                                             }
-                                        }
-                                    }
+                                        },
+                                    )
                                     message = "Scan complete. You can select the last signal below."
                                 } catch (error: kotlinx.coroutines.CancellationException) {
+                                    if (generation == runGeneration) {
+                                        message = "Stopped. Select the last signal below."
+                                    }
                                     throw error
                                 } catch (error: Exception) {
-                                    message = error.message ?: "Could not transmit the signal"
+                                    if (generation == runGeneration) {
+                                        message = error.message ?: "Could not transmit the signal"
+                                    }
                                 } finally {
-                                    running = false
+                                    if (generation == runGeneration) running = false
                                 }
                             }
                         }
