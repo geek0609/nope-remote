@@ -26,6 +26,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.ArrowForwardIos
+import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.Add
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.compose.material.icons.outlined.CameraAlt
@@ -139,10 +140,10 @@ fun RemoteControl(
                 onBack = onBack,
                 actions = {
                     if (isCustomUiAvailable && !isEmpty) {
-                        val altIcon = if (layoutType == CustomRemoteLayout.CAMERA) {
-                            Icons.Outlined.CameraAlt
-                        } else {
-                            Icons.Outlined.Lightbulb
+                        val altIcon = when (layoutType) {
+                            CustomRemoteLayout.CAMERA -> Icons.Outlined.CameraAlt
+                            CustomRemoteLayout.AIR_CONDITIONER -> Icons.Outlined.AcUnit
+                            else -> Icons.Outlined.Lightbulb
                         }
                         ActionButton(
                             name = "Switch Layout",
@@ -186,6 +187,8 @@ fun RemoteControl(
                     LightRemote(
                         remoteDataDBModel = remoteDataModel,
                     )
+                } else if (showCustomUi && layoutType == CustomRemoteLayout.AIR_CONDITIONER) {
+                    AirConditionerRemote(remoteDataModel)
                 } else {
                     UniversalRemote(
                         remoteDataDBModel = remoteDataModel,

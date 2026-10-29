@@ -31,6 +31,8 @@
 - **Custom Remote Creation** - Build completely custom remotes from scratch tailored to your exact devices and layout preferences.
 - **Custom Button Support** - Add and configure custom keys and buttons on your remotes with custom labels, icons, frequencies, and IR patterns.
 - **IR Code Search** - Sweep address and command ranges for a selected protocol, repeat or step through signals, and save a responding code as a button.
+- **Guided Remote Matching** - Test distinguishing signals to narrow a brand's profiles, with undo and manual browsing when a signal is missed.
+- **Air Conditioner Layout** - Group an AC remote's saved signals into power, temperature, mode, fan and swing controls.
 - **TV Companion** - An optional APK for Android-based TV boxes without the Google TV remote service. Pair on the local network for accessibility-based navigation, volume, and text/clipboard actions.
 - **ADB TV Remote** - Send remote-control key events over classic ADB-over-TCP to an Android device with debugging enabled.
 - **Hardware Volume Keys Integration** - Conveniently control TV volume using your smartphone's physical volume buttons.
@@ -58,6 +60,14 @@ Nope Remote supports downloading and importing codes from the following communit
 - **[Flipper Devices IRDB](https://github.com/flipperdevices/IRDB)** - The official Flipper Devices repository of infrared remote codes.
 
 The **Built-in** source includes two Foxsky TV profiles. To use one, select Built-in from the repository selector, choose TV and Foxsky, and test the profiles before saving. An Android phone with an IR blaster is required. The signals were retrieved from [Kookong](https://www.kookong.com/en/kookong_ir) on 29 October 2026; redistribution terms for this data have not been verified.
+
+### Importing a database
+
+In Settings, choose **Import offline database** and select a compatible SQLite database file. If the database is inside an APK, extract `assets/kkoffline16.db` from the APK and transfer that file to the phone first; the picker accepts the database, not the APK. Then select **Imported database** in the repository selector when adding a remote. The file stays on the device and is not included with the app. The importer supports a subset of parameterized pulse-distance signals; other formats and unsupported buttons are skipped. The displayed profile count is an estimate based on the format, not a count of tested working remotes. Database redistribution and use terms depend on its source and have not been verified.
+
+When browsing a brand's profiles, choose **Find match** to try distinguishing signals. Responses are clues, not guarantees: a device can accept more than one signal, and a missed transmission can hide a matching profile. Undo, start over, or browse all profiles, and test several buttons before saving.
+
+AC remotes with saved signals have an optional grouped layout. The app cannot read the AC's current settings, and a saved signal may change several settings at once. It does not generate missing state-dependent commands.
 
 ## Tech Stack
 

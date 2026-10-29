@@ -13,6 +13,7 @@ import com.monuk7735.nope.remote.repository.BuiltInRemoteRepository
 import com.monuk7735.nope.remote.repository.FlipperDevicesIRDBRepository
 import com.monuk7735.nope.remote.repository.FlipperIrdbRepository
 import com.monuk7735.nope.remote.repository.IRSourceRepository
+import com.monuk7735.nope.remote.repository.ImportedDatabaseRepository
 import com.monuk7735.nope.remote.repository.IrextRepository
 import com.monuk7735.nope.remote.repository.MiRemoteDumpRepository
 import com.monuk7735.nope.remote.repository.ProbonopdRepository
@@ -41,6 +42,7 @@ class AddRemoteActivityViewModel(application: Application) : AndroidViewModel(ap
             FlipperDevicesIRDBRepository(application),
         ),
         Pair("Built-in", BuiltInRemoteRepository(application)),
+        Pair("Imported database", ImportedDatabaseRepository(application)),
     )
 
     private val installedRepoPairs = allRepositories.filter {

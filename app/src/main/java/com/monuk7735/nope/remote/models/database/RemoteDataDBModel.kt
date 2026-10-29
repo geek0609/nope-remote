@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.monuk7735.nope.remote.models.CustomRemoteLayout
+import com.monuk7735.nope.remote.models.isAirConditionerType
 import java.util.Date
 import kotlinx.parcelize.Parcelize
 
@@ -111,6 +112,12 @@ data class RemoteDataDBModel(
     }
 
     fun getCustomLayoutType(): CustomRemoteLayout {
+        if (isAirConditionerType(type) &&
+            (onScreenRemoteButtonDBS.isNotEmpty() || offScreenRemoteButtonDBS.isNotEmpty())
+        ) {
+            return CustomRemoteLayout.AIR_CONDITIONER
+        }
+
         val isCamera = type.contains("Camera", ignoreCase = true) ||
             type.contains("DSLR", ignoreCase = true)
         val shutterButton = getByName("SHUTTER")

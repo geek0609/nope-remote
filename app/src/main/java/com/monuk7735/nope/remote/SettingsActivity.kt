@@ -4,8 +4,10 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -47,6 +49,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -66,10 +69,12 @@ import com.monuk7735.nope.remote.composables.RepositoryPreference
 import com.monuk7735.nope.remote.composables.SettingsGroup
 import com.monuk7735.nope.remote.composables.SingleChoicePreference
 import com.monuk7735.nope.remote.composables.SwitchPreference
+import com.monuk7735.nope.remote.repository.ImportedDatabaseRepository
 import com.monuk7735.nope.remote.service.RepoState
 import com.monuk7735.nope.remote.ui.theme.NopeRemoteTheme
 import com.monuk7735.nope.remote.ui.theme.rememberThemeSettings
 import com.monuk7735.nope.remote.viewmodels.SettingsActivityViewModel
+import kotlinx.coroutines.launch
 
 @ExperimentalMaterial3Api
 class SettingsActivity : ComponentActivity() {
@@ -107,6 +112,30 @@ class SettingsActivity : ComponentActivity() {
         var showClearPairingDialog by remember { mutableStateOf(false) }
         val context = LocalContext.current
         val uriHandler = LocalUriHandler.current
+        val scope = rememberCoroutineScope()
+        var importMessage by remember { mutableStateOf<String?>(null) }
+        var importing by remember { mutableStateOf(false) }
+        val databasePicker =
+            rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+                if (uri != null && !importing) {
+                    importing = true
+                    scope.launch {
+                        importMessage = try {
+                            val count = ImportedDatabaseRepository.import(context, uri)
+                            "Imported database. $count profiles use a potentially " +
+                                "supported signal format. " +
+                                "Other formats and invalid keys are skipped. " +
+                                "Select Imported database when adding a remote."
+                        } catch (e: Exception) {
+                            val reason = (e as? IllegalArgumentException)?.message
+                                ?: "The file is not a readable compatible database."
+                            "Import failed: $reason"
+                        } finally {
+                            importing = false
+                        }
+                    }
+                }
+            }
 
         NopeRemoteTheme(
             useDarkTheme =
@@ -247,6 +276,30 @@ class SettingsActivity : ComponentActivity() {
                         SettingsGroup(
                             title = "Infrared Repositories",
                         ) {
+                            Column(
+                                modifier = Modifier.fillMaxWidth().padding(
+                                    horizontal = 16.dp,
+                                    vertical = 12.dp,
+                                ),
+                            ) {
+                                Text(
+                                    "Import offline database",
+                                    style = MaterialTheme.typography.titleMedium,
+                                )
+                                Text(
+                                    "Select a compatible SQLite file. " +
+                                        "Only supported signal formats are available.",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                )
+                                OutlinedButton(onClick = {
+                                    databasePicker.launch("*/*")
+                                }, enabled = !importing) {
+                                    Text(if (importing) "Importing…" else "Choose file")
+                                }
+                                importMessage?.let {
+                                    Text(it, style = MaterialTheme.typography.bodySmall)
+                                }
+                            }
                             val repoStates by viewModel.repoStates.observeAsState(emptyMap())
 
                             viewModel.availableRepositories.forEach { repo ->

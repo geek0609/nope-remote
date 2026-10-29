@@ -4,4 +4,5 @@ enum class CustomRemoteLayout {
     NONE,
     CAMERA,
     LIGHT,
+    AIR_CONDITIONER,
 }

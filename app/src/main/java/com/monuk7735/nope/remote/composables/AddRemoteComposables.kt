@@ -5,6 +5,7 @@ import android.hardware.ConsumerIrManager
 import android.os.Build
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.widget.Toast
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -432,6 +433,7 @@ fun ListCodes(
 ) {
     var selected by remember { mutableStateOf(0) }
     var showIcons by remember { mutableStateOf(true) }
+    var guided by remember { mutableStateOf(false) }
 
     val hasCodes = !allCodes.isNullOrEmpty()
     val rightEnabled = hasCodes && (selected + 1 < allCodes.size)
@@ -439,6 +441,18 @@ fun ListCodes(
 
     val allRemoteDataDBModels =
         remember(allCodes) { allCodes?.map { it.toDBModel() } ?: emptyList() }
+
+    if (guided && !allCodes.isNullOrEmpty()) {
+        GuidedRemoteMatcher(
+            profiles = allCodes,
+            onReview = { index ->
+                selected = index
+                guided = false
+            },
+            onBack = { guided = false },
+        )
+        return
+    }
 
     Scaffold(
         modifier = Modifier.fillMaxSize(),
@@ -459,6 +473,9 @@ fun ListCodes(
                 title = titleText,
                 onBack = onBack,
                 actions = {
+                    if ((allCodes?.size ?: 0) > 1) {
+                        TextButton(onClick = { guided = true }) { Text("Find match") }
+                    }
                     TextButton(onClick = { showIcons = !showIcons }) {
                         Text(if (showIcons) "Hide Icons" else "Show Icons")
                     }
@@ -615,11 +632,10 @@ fun ListCodes(
 @Composable
 fun TestRemoteGrid(remoteDataDBModel: RemoteDataDBModel, showIcons: Boolean = true) {
     val context = LocalContext.current
-    val irController = remember {
-        IRController(
-            context.getSystemService(Context.CONSUMER_IR_SERVICE) as ConsumerIrManager,
-        )
+    val manager = remember(context) {
+        context.getSystemService(Context.CONSUMER_IR_SERVICE) as? ConsumerIrManager
     }
+    val irController = remember(manager) { manager?.let(::IRController) }
     val vibrator = remember {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             val vibratorManager =
@@ -653,7 +669,25 @@ fun TestRemoteGrid(remoteDataDBModel: RemoteDataDBModel, showIcons: Boolean = tr
                 forceTextOnly = !showIcons,
                 offsetX = 0f,
                 offsetY = 0f,
-                onClick = { button.transmit(irController, vibrator) },
+                onClick = {
+                    if (manager?.hasIrEmitter() != true || irController == null) {
+                        Toast.makeText(
+                            context,
+                            "No infrared transmitter available",
+                            Toast.LENGTH_SHORT,
+                        )
+                            .show()
+                    } else {
+                        runCatching { button.transmit(irController, vibrator) }.onFailure {
+                            Toast.makeText(
+                                context,
+                                "Could not send this signal",
+                                Toast.LENGTH_SHORT,
+                            )
+                                .show()
+                        }
+                    }
+                },
             )
         }
     }
