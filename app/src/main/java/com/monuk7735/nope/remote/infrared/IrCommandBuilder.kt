@@ -43,8 +43,14 @@ class IrCommandBuilder(val frequency: Int) {
         length: Int,
         data: Long,
     ): IrCommandBuilder {
-        var d = data
-        val topBit = 1L shl 63
+        require(length in 1..64)
+        for (index in 0 until length) {
+            if ((data ushr (length - index - 1)) and 1L != 0L) {
+                definition.one(this, index)
+            } else {
+                definition.zero(this, index)
+            }
+        }
         return this
     }
 

@@ -6,6 +6,7 @@ import com.monuk7735.nope.remote.composables.generateProtocolPattern
 import com.monuk7735.nope.remote.infrared.patterns.IRPatternType
 import com.monuk7735.nope.remote.models.database.RemoteDataDBModel
 import java.util.Date
+import org.junit.Assert.assertArrayEquals
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
@@ -91,5 +92,23 @@ class CustomRemoteTest {
     @Test(expected = IllegalArgumentException::class)
     fun testFrequencyPatternEmptyThrows() {
         generateFrequencyPattern("38000", "   ")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun malformedIntervalIsNotSilentlyDropped() {
+        generateFrequencyPattern("38000", "9000, typo, 560")
+    }
+
+    @Test(expected = IllegalArgumentException::class)
+    fun nonPositiveIntervalIsRejected() {
+        generateFrequencyPattern("38000", "9000, -1")
+    }
+
+    @Test
+    fun mostSignificantBitSequenceIncludesEveryBit() {
+        val builder = com.monuk7735.nope.remote.infrared.IrCommandBuilder(38000)
+        val symbols = com.monuk7735.nope.remote.infrared.IrCommandBuilder.simpleSequence(1, 2, 1, 1)
+        builder.sequence(symbols, 4, 0b1010)
+        assertArrayEquals(intArrayOf(1, 2, 1, 1, 1, 2, 1, 1), builder.build().toIntArray())
     }
 }

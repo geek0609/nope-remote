@@ -170,9 +170,14 @@ fun generateFrequencyPattern(frequencyStr: String, dataStr: String): IRPattern {
         return IRPatternDecoder(trimmedData).irPattern
     }
 
-    val frequency = frequencyStr.trim().toIntOrNull() ?: 38000
+    val frequency = frequencyStr.trim().toIntOrNull()
+        ?: throw IllegalArgumentException("Enter a valid carrier frequency")
+    require(frequency in 1..1000000) { "Carrier frequency must be between 1 and 1000000 Hz" }
     val tokens = trimmedData.split("[,\\s]+".toRegex()).filter { it.isNotBlank() }
-    val timings = tokens.mapNotNull { it.toIntOrNull() }
+    val timings = tokens.map { token ->
+        token.toIntOrNull()?.takeIf { it > 0 }
+            ?: throw IllegalArgumentException("Invalid pulse duration: $token")
+    }
 
     if (timings.isEmpty()) {
         throw IllegalArgumentException("No valid integer pulse durations found")
@@ -559,6 +564,24 @@ fun AddCustomKeyDialog(
                                     modifier = Modifier.fillMaxWidth(),
                                     shape = RoundedCornerShape(12.dp),
                                 )
+                                IrCodeScanner(
+                                    protocol = selectedProtocol,
+                                    device = parseNumberInput(deviceInput, isHexFormat),
+                                    subdevice = parseNumberInput(subdeviceInput, isHexFormat),
+                                    controller = irController,
+                                    onCodeSelected = { address, command ->
+                                        deviceInput = if (isHexFormat) {
+                                            address.toString(16).uppercase()
+                                        } else {
+                                            address.toString()
+                                        }
+                                        functionInput = if (isHexFormat) {
+                                            command.toString(16).uppercase()
+                                        } else {
+                                            command.toString()
+                                        }
+                                    },
+                                )
                             }
                         }
                     } else {
@@ -680,8 +703,12 @@ fun AddCustomKeyDialog(
                     OutlinedButton(
                         onClick = {
                             val result = buildCurrentPattern()
-                            result.onSuccess { pattern ->
-                                irController?.transmit(pattern, vibrator)
+                            result.mapCatching { pattern ->
+                                val controller = irController
+                                    ?: throw IllegalStateException("No IR blaster is available")
+                                controller.transmit(pattern, vibrator)
+                                pattern
+                            }.onSuccess { pattern ->
                                 statusMessage = "Signal transmitted (" +
                                     "${pattern.frequency} Hz, " +
                                     "${pattern.intervals.size} pulses)!"
