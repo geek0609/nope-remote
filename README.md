@@ -54,6 +54,8 @@ Nope Remote supports downloading and importing codes from the following communit
 - **[Flipper-IRDB](https://github.com/Lucaslhm/Flipper-IRDB)** - A comprehensive database of infrared remote codes for Flipper Zero, converted for use.
 - **[Flipper Devices IRDB](https://github.com/flipperdevices/IRDB)** - The official Flipper Devices repository of infrared remote codes.
 
+The **Built-in** source includes two Foxsky TV profiles. To use one, select Built-in from the repository selector, choose TV and Foxsky, and test the profiles before saving. An Android phone with an IR blaster is required. The signals were retrieved from [Kookong](https://www.kookong.com/en/kookong_ir) on 29 October 2026; redistribution terms for this data have not been verified.
+
 ## Tech Stack
 
 - **Language** - [Kotlin](https://kotlinlang.org/)

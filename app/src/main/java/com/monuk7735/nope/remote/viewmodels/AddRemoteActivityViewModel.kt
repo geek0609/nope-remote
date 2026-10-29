@@ -9,6 +9,7 @@ import com.monuk7735.nope.remote.models.database.RemoteDataDBModel
 import com.monuk7735.nope.remote.models.retrofit.DeviceBrandsRetrofitModel
 import com.monuk7735.nope.remote.models.retrofit.DeviceCodesRetrofitModel
 import com.monuk7735.nope.remote.models.retrofit.DeviceTypesRetrofitModel
+import com.monuk7735.nope.remote.repository.BuiltInRemoteRepository
 import com.monuk7735.nope.remote.repository.FlipperDevicesIRDBRepository
 import com.monuk7735.nope.remote.repository.FlipperIrdbRepository
 import com.monuk7735.nope.remote.repository.IRSourceRepository
@@ -39,11 +40,12 @@ class AddRemoteActivityViewModel(application: Application) : AndroidViewModel(ap
             RepoDownloadManager.RepositoryInfo.FLIPPER_DEVICES_IRDB.title,
             FlipperDevicesIRDBRepository(application),
         ),
+        Pair("Built-in", BuiltInRemoteRepository(application)),
     )
 
     private val installedRepoPairs = allRepositories.filter {
         it.second.isRepoInstalled()
-    }.ifEmpty { listOf(allRepositories[0]) }
+    }
 
     private val repositories = installedRepoPairs.map { it.second }
     val availableRepos = installedRepoPairs.map { it.first }
