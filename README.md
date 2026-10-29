@@ -113,6 +113,8 @@ To search, choose a protocol and subdevice, enter decimal address and command ra
 
 Build both debug APKs with `./gradlew :app:assembleDebug :tvcompanion:assembleDebug`. Install `tvcompanion/build/outputs/apk/debug/tvcompanion-debug.apk` on the Android TV box and `app/build/outputs/apk/debug/app-debug.apk` on the phone. On the box, open **Nope TV Companion**, enable its accessibility service in Android settings, then return to its setup screen and wait for **Service is ready**. On the phone, choose **Connect to TV Companion** and enter the TV address and pairing code shown on the TV. Both devices need network connectivity to each other on TCP port 42784.
 
+If Android blocks the sideloaded accessibility service, open the companion's app settings and select **Allow restricted settings** from the app information menu before enabling the service. Menu names and availability vary by device.
+
 The companion uses accessibility actions instead of system privileges or ADB. Navigation and text insertion depend on the target app exposing accessible, focusable controls. Select a text field on the TV before sending text; use **Phone clipboard** to load the phone's clipboard into the text box. Copying selected text from the TV may be blocked by Android's background clipboard restrictions. This companion is for Android-based boxes capable of installing APKs; it does not support non-Android operating systems. It cannot inject arbitrary ADB key events or control apps that do not expose the required accessibility actions.
 
 Pairing codes are generated on the TV and change when the service restarts. Requests and responses are authenticated and encrypted with that code; disable the companion accessibility service to stop its listener.

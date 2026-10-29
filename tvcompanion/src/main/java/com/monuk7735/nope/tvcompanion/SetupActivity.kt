@@ -2,6 +2,7 @@ package com.monuk7735.nope.tvcompanion
 
 import android.app.Activity
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -9,6 +10,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.ScrollView
 import android.widget.TextView
 import com.monuk7735.nope.tvbridge.BridgeProtocol
 import java.net.Inet4Address
@@ -81,13 +83,31 @@ class SetupActivity : Activity() {
             layout.addView(this)
         }
         line("Enter the address and pairing code in Nope Remote on your phone.", 18f)
+        line("If Android blocks the service, allow restricted settings in app settings.", 16f)
         layout.addView(
             Button(this).apply {
                 text = "Open accessibility settings"
                 setOnClickListener { startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) }
             },
         )
-        setContentView(layout)
+        layout.addView(
+            Button(this).apply {
+                text = "Open app settings"
+                setOnClickListener {
+                    startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.parse("package:$packageName")
+                        },
+                    )
+                }
+            },
+        )
+        setContentView(
+            ScrollView(this).apply {
+                isFillViewport = true
+                addView(layout)
+            },
+        )
     }
 
     override fun onResume() {

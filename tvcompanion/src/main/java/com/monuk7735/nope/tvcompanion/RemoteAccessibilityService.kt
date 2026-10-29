@@ -56,7 +56,8 @@ class RemoteAccessibilityService : AccessibilityService() {
     private fun execute(request: JSONObject): JSONObject {
         val action = request.optString("action")
         val root = rootInActiveWindow
-        val focused = root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+        val focused = findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
+            ?: root?.findFocus(AccessibilityNodeInfo.FOCUS_INPUT)
         val result = when (action) {
             "home" -> performGlobalAction(GLOBAL_ACTION_HOME)
             "back" -> performGlobalAction(GLOBAL_ACTION_BACK)
