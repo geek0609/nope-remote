@@ -18,6 +18,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -33,6 +34,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.monuk7735.nope.remote.adb.AdbRemoteClient
 import com.monuk7735.nope.remote.composables.AppBar
 import com.monuk7735.nope.remote.ui.theme.NopeRemoteTheme
 import com.monuk7735.nope.remote.ui.theme.rememberThemeSettings
@@ -41,8 +43,10 @@ import java.io.DataInputStream
 import java.io.DataOutputStream
 import java.net.InetSocketAddress
 import java.net.Socket
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runInterruptible
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -71,37 +75,56 @@ private fun CompanionRemoteScreen(onBack: () -> Unit) {
     val mutex = remember { Mutex() }
     var host by rememberSaveable { mutableStateOf("") }
     var code by rememberSaveable { mutableStateOf("") }
+    var port by rememberSaveable { mutableStateOf("5555") }
+    var adbMode by rememberSaveable { mutableStateOf(false) }
     var connected by remember { mutableStateOf(false) }
+    var connecting by remember { mutableStateOf(false) }
     var message by remember { mutableStateOf("Install and open Nope TV Companion on the TV box.") }
     var text by rememberSaveable { mutableStateOf("") }
 
     fun send(action: String, value: String = "") {
         val address = host.trim()
         val pairingCode = code.trim()
+        val usingAdb = adbMode
+        val adbPort = port.toIntOrNull() ?: 0
+        if (action == "ping") {
+            connecting = true
+            if (usingAdb) message = "Connecting. Accept the debugging prompt on the TV if shown."
+        }
         scope.launch {
             try {
                 val response = mutex.withLock {
-                    withContext(Dispatchers.IO) {
-                        val key = BridgeProtocol.key(pairingCode)
-                        Socket().use { socket ->
-                            socket.connect(InetSocketAddress(address, BridgeProtocol.PORT), 3000)
-                            socket.soTimeout = 5000
-                            val request = JSONObject().put(
-                                "action",
-                                action,
-                            ).put("text", value).toString()
-                            val nonce = BridgeProtocol.write(
-                                DataOutputStream(socket.getOutputStream()),
-                                key,
-                                request,
-                                BridgeProtocol.requestContext,
-                            )
-                            val (_, reply) = BridgeProtocol.read(
-                                DataInputStream(socket.getInputStream()),
-                                key,
-                                BridgeProtocol.responseContext(nonce),
-                            )
-                            JSONObject(reply)
+                    if (usingAdb) {
+                        runInterruptible(Dispatchers.IO) {
+                            AdbRemoteClient.execute(context, address, adbPort, action)
+                            JSONObject().put("ok", true).put("message", "Done")
+                        }
+                    } else {
+                        withContext(Dispatchers.IO) {
+                            val key = BridgeProtocol.key(pairingCode)
+                            Socket().use { socket ->
+                                socket.connect(
+                                    InetSocketAddress(address, BridgeProtocol.PORT),
+                                    3000,
+                                )
+                                socket.soTimeout = 5000
+                                val request = JSONObject().put(
+                                    "action",
+                                    action,
+                                ).put("text", value).toString()
+                                val nonce = BridgeProtocol.write(
+                                    DataOutputStream(socket.getOutputStream()),
+                                    key,
+                                    request,
+                                    BridgeProtocol.requestContext,
+                                )
+                                val (_, reply) = BridgeProtocol.read(
+                                    DataInputStream(socket.getInputStream()),
+                                    key,
+                                    BridgeProtocol.responseContext(nonce),
+                                )
+                                JSONObject(reply)
+                            }
                         }
                     }
                 }
@@ -116,14 +139,18 @@ private fun CompanionRemoteScreen(onBack: () -> Unit) {
                 } else {
                     message = response.optString("message", "Done")
                 }
+            } catch (error: CancellationException) {
+                throw error
             } catch (error: Exception) {
                 if (action == "ping") connected = false
-                message = error.message ?: "Could not reach the TV companion"
+                message = error.message ?: "Could not reach the TV"
+            } finally {
+                if (action == "ping") connecting = false
             }
         }
     }
 
-    Scaffold(topBar = { AppBar(title = "TV Companion", onBack = onBack) }) { padding ->
+    Scaffold(topBar = { AppBar(title = "TV box remote", onBack = onBack) }) { padding ->
         Column(
             modifier = Modifier.fillMaxSize().padding(
                 padding,
@@ -131,27 +158,59 @@ private fun CompanionRemoteScreen(onBack: () -> Unit) {
             verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             if (!connected) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(selected = !adbMode, enabled = !connecting, onClick = {
+                        adbMode = false
+                        message = "Install and open Nope TV Companion on the TV box."
+                    }, label = { Text("Companion") })
+                    FilterChip(selected = adbMode, enabled = !connecting, onClick = {
+                        adbMode = true
+                        message = "Enter the TV's classic ADB address and port."
+                    }, label = { Text("ADB") })
+                }
                 Text(
-                    "Enable the companion accessibility service on the TV and enter its address and pairing code.",
+                    if (adbMode) {
+                        "Enable ADB over TCP on the TV. Accept its debugging authorization prompt when connecting."
+                    } else {
+                        "Enable the companion accessibility service on the TV and enter its address and pairing code."
+                    },
                 )
                 OutlinedTextField(
                     value = host,
                     onValueChange = { host = it },
+                    enabled = !connecting,
                     label = { Text("TV IP address") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
-                OutlinedTextField(
-                    value = code,
-                    onValueChange = { code = it },
-                    label = { Text("Pairing code") },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
-                Button(onClick = {
-                    send("ping")
-                }, enabled = host.isNotBlank() && code.isNotBlank()) {
-                    Text("Connect")
+                if (adbMode) {
+                    OutlinedTextField(
+                        value = port,
+                        onValueChange = { port = it },
+                        enabled = !connecting,
+                        label = { Text("ADB port") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    OutlinedTextField(
+                        value = code,
+                        onValueChange = { code = it },
+                        enabled = !connecting,
+                        label = { Text("Pairing code") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+                Button(
+                    onClick = {
+                        send("ping")
+                    },
+                    enabled = !connecting &&
+                        host.isNotBlank() &&
+                        if (adbMode) port.toIntOrNull() in 1..65535 else code.isNotBlank(),
+                ) {
+                    Text(if (connecting) "Connecting..." else "Connect")
                 }
             } else {
                 Text("Connected to $host", style = MaterialTheme.typography.titleMedium)
@@ -196,32 +255,43 @@ private fun CompanionRemoteScreen(onBack: () -> Unit) {
                 }, modifier = Modifier.fillMaxWidth()) {
                     Text("Play / Pause")
                 }
-                OutlinedTextField(
-                    value = text,
-                    onValueChange = { text = it },
-                    label = { Text("Text for TV") },
-                    modifier = Modifier.fillMaxWidth(),
-                    minLines = 2,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    OutlinedButton(
-                        onClick = {
-                            val clipboard = context.getSystemService(
-                                Context.CLIPBOARD_SERVICE,
-                            ) as ClipboardManager
-                            text =
-                                clipboard.primaryClip?.getItemAt(
-                                    0,
-                                )?.coerceToText(context)?.toString().orEmpty()
-                        },
-                        modifier = Modifier.weight(1f),
-                    ) { Text("Phone clipboard") }
-                    Button(onClick = {
-                        send("paste", text)
-                    }, modifier = Modifier.weight(1f)) { Text("Paste on TV") }
-                }
-                OutlinedButton(onClick = { send("copy") }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Copy selection from TV")
+                if (adbMode) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(onClick = {
+                            send("power")
+                        }, modifier = Modifier.weight(1f)) { Text("Power") }
+                        OutlinedButton(onClick = {
+                            send("menu")
+                        }, modifier = Modifier.weight(1f)) { Text("Menu") }
+                    }
+                } else {
+                    OutlinedTextField(
+                        value = text,
+                        onValueChange = { text = it },
+                        label = { Text("Text for TV") },
+                        modifier = Modifier.fillMaxWidth(),
+                        minLines = 2,
+                    )
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        OutlinedButton(
+                            onClick = {
+                                val clipboard = context.getSystemService(
+                                    Context.CLIPBOARD_SERVICE,
+                                ) as ClipboardManager
+                                text =
+                                    clipboard.primaryClip?.getItemAt(
+                                        0,
+                                    )?.coerceToText(context)?.toString().orEmpty()
+                            },
+                            modifier = Modifier.weight(1f),
+                        ) { Text("Phone clipboard") }
+                        Button(onClick = {
+                            send("paste", text)
+                        }, modifier = Modifier.weight(1f)) { Text("Paste on TV") }
+                    }
+                    OutlinedButton(onClick = { send("copy") }, modifier = Modifier.fillMaxWidth()) {
+                        Text("Copy selection from TV")
+                    }
                 }
                 OutlinedButton(onClick = {
                     connected = false

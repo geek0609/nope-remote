@@ -444,7 +444,7 @@ class HomeActivity : ComponentActivity() {
                                         )
                                     },
                                     modifier = Modifier.fillMaxWidth(),
-                                ) { Text("Connect to TV Companion") }
+                                ) { Text("Connect to TV Companion or ADB") }
                             }
                             item(span = { GridItemSpan(maxLineSpan) }) {
                                 AndroidTvSection(

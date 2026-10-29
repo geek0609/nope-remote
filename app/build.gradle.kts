@@ -80,6 +80,7 @@ dependencies {
     // Networking
     implementation("com.squareup.retrofit2:retrofit:3.0.0")
     implementation("com.squareup.retrofit2:converter-gson:3.0.0")
+    implementation("com.tananaev:adblib:1.3")
 
     // Database - Room
     implementation("androidx.room:room-runtime:2.8.4")

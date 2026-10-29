@@ -32,6 +32,7 @@
 - **Custom Button Support** - Add and configure custom keys and buttons on your remotes with custom labels, icons, frequencies, and IR patterns.
 - **IR Code Search** - Sweep address and command ranges for a selected protocol, repeat or step through signals, and save a responding code as a button.
 - **TV Companion** - An optional APK for Android-based TV boxes without the Google TV remote service. Pair on the local network for accessibility-based navigation, volume, and text/clipboard actions.
+- **ADB TV Remote** - Send remote-control key events over classic ADB-over-TCP to an Android device with debugging enabled.
 - **Hardware Volume Keys Integration** - Conveniently control TV volume using your smartphone's physical volume buttons.
 - **Custom Macros** - Create "Macros" to chain multiple commands together. Turn on your TV, Set-Top Box, and Soundbar with a single tap!
 - **Offline Database** - Direct database downloads for seamless offline access without reliance on third-party CDNs.
@@ -118,6 +119,12 @@ If Android blocks the sideloaded accessibility service, open the companion's app
 The companion uses accessibility actions instead of system privileges or ADB. Navigation and text insertion depend on the target app exposing accessible, focusable controls. Select a text field on the TV before sending text; use **Phone clipboard** to load the phone's clipboard into the text box. Copying selected text from the TV may be blocked by Android's background clipboard restrictions. This companion is for Android-based boxes capable of installing APKs; it does not support non-Android operating systems. It cannot inject arbitrary ADB key events or control apps that do not expose the required accessibility actions.
 
 Pairing codes are generated on the TV and change when the service restarts. Requests and responses are authenticated and encrypted with that code; disable the companion accessibility service to stop its listener.
+
+### ADB over TCP
+
+Choose **Connect to TV Companion or ADB**, then select **ADB** and enter the Android device's address and ADB TCP port (normally 5555). Enable developer options and ADB debugging on the device. Some devices offer a TCP debugging toggle; others need an initial USB connection and `adb tcpip 5555`. Accept the debugging authorization prompt on the TV when connecting. The phone stores its ADB key in private, non-backed-up app storage. ADB mode sends actual key events, including Power and Menu; clipboard actions are available through the companion instead.
+
+This mode uses classic ADB-over-TCP, which is unencrypted. It does not implement the Android 11+ wireless-debugging pairing-code protocol, and requires a device listening for classic ADB connections. Disable TCP debugging when it is no longer needed. The ADB transport uses [adblib](https://github.com/tananaev/adblib) under the BSD 3-Clause license; its license is included in the APK at `assets/licenses/adblib.txt`.
 
 ## Contributing
 
