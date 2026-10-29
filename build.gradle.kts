@@ -10,12 +10,23 @@ plugins {
 
 spotless {
     kotlin {
-        target("app/src/**/*.kt", "androidtv/src/**/*.kt")
+        target(
+            "app/src/**/*.kt",
+            "androidtv/src/**/*.kt",
+            "tvbridge/src/**/*.kt",
+            "tvcompanion/src/**/*.kt",
+        )
         targetExclude("**/build/**")
         ktlint("1.4.1")
     }
     kotlinGradle {
-        target("*.gradle.kts", "app/*.gradle.kts", "androidtv/*.gradle.kts")
+        target(
+            "*.gradle.kts",
+            "app/*.gradle.kts",
+            "androidtv/*.gradle.kts",
+            "tvbridge/*.gradle.kts",
+            "tvcompanion/*.gradle.kts",
+        )
         ktlint("1.4.1")
     }
 }

@@ -437,6 +437,16 @@ class HomeActivity : ComponentActivity() {
                             }
 
                             item(span = { GridItemSpan(maxLineSpan) }) {
+                                OutlinedButton(
+                                    onClick = {
+                                        startActivity(
+                                            Intent(context, CompanionRemoteActivity::class.java),
+                                        )
+                                    },
+                                    modifier = Modifier.fillMaxWidth(),
+                                ) { Text("Connect to TV Companion") }
+                            }
+                            item(span = { GridItemSpan(maxLineSpan) }) {
                                 AndroidTvSection(
                                     savedTvs = allWifiRemotes,
                                     discoveredTvs = discoveredTvs,

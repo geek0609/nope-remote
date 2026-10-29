@@ -106,4 +106,5 @@ dependencies {
 
     // Android TV Remote Module
     implementation(project(":androidtv"))
+    implementation(project(":tvbridge"))
 }

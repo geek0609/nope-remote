@@ -30,6 +30,8 @@
 - **Universal IR Compatibility** - Control TVs, Set-Top Boxes, ACs, and more using your phone's built-in IR blaster.
 - **Custom Remote Creation** - Build completely custom remotes from scratch tailored to your exact devices and layout preferences.
 - **Custom Button Support** - Add and configure custom keys and buttons on your remotes with custom labels, icons, frequencies, and IR patterns.
+- **IR Code Search** - Sweep address and command ranges for a selected protocol, repeat or step through signals, and save a responding code as a button.
+- **TV Companion** - An optional APK for Android-based TV boxes without the Google TV remote service. Pair on the local network for accessibility-based navigation, volume, and text/clipboard actions.
 - **Hardware Volume Keys Integration** - Conveniently control TV volume using your smartphone's physical volume buttons.
 - **Custom Macros** - Create "Macros" to chain multiple commands together. Turn on your TV, Set-Top Box, and Soundbar with a single tap!
 - **Offline Database** - Direct database downloads for seamless offline access without reliance on third-party CDNs.
@@ -100,6 +102,20 @@ Download the latest APK from the [Releases](https://github.com/monuk7735/NopeRem
 3. Select your device type and brand.
 4. Test the buttons to find the working configuration and save.
 5. Go to the **Macros** tab to create sequences like "Watch Movie" (TV On + Soundbar On + Dim Lights).
+
+### Manual IR codes and search
+
+Create a custom remote, open it, enter edit mode and add a button. The button editor accepts a protocol, address and command, or a carrier frequency and raw mark/space timings in microseconds, or Pronto hex. Test the signal before saving it.
+
+To search, choose a protocol and subdevice, enter decimal address and command ranges and a delay, then start the scan. Point the phone at the device, stop when it responds, and use Repeat/Previous/Next to check the last signal. Choose **Use last signal**, give the button a name, and add it. Some protocols use fewer bits than the search ranges and may repeat codes. Scanning transmits candidate signals; Android's standard IR API does not receive and learn an existing remote's signal. A phone with a working IR transmitter is required.
+
+### Android TV box companion
+
+Build both debug APKs with `./gradlew :app:assembleDebug :tvcompanion:assembleDebug`. Install `tvcompanion/build/outputs/apk/debug/tvcompanion-debug.apk` on the Android TV box and `app/build/outputs/apk/debug/app-debug.apk` on the phone. On the box, open **Nope TV Companion**, enable its accessibility service in Android settings, then return to its setup screen and wait for **Service is ready**. On the phone, choose **Connect to TV Companion** and enter the TV address and pairing code shown on the TV. Both devices need network connectivity to each other on TCP port 42784.
+
+The companion uses accessibility actions instead of system privileges or ADB. Navigation and text insertion depend on the target app exposing accessible, focusable controls. Select a text field on the TV before sending text; use **Phone clipboard** to load the phone's clipboard into the text box. Copying selected text from the TV may be blocked by Android's background clipboard restrictions. This companion is for Android-based boxes capable of installing APKs; it does not support non-Android operating systems. It cannot inject arbitrary ADB key events or control apps that do not expose the required accessibility actions.
+
+Pairing codes are generated on the TV and change when the service restarts. Requests and responses are authenticated and encrypted with that code; disable the companion accessibility service to stop its listener.
 
 ## Contributing
 

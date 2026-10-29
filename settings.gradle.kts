@@ -16,3 +16,5 @@ dependencyResolutionManagement {
 rootProject.name = "Nope Remote"
 include(":app")
 include(":androidtv")
+include(":tvbridge")
+include(":tvcompanion")
